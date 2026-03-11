@@ -1264,7 +1264,6 @@ async function pollForEvents() {
           }
         });
       }
-
     }
   } catch(e) {
     // Polling failed (no server) — demo mode is fine
@@ -1278,8 +1277,87 @@ try {
   addLog('BroadcastChannel listener active', 'success');
 } catch(e) {}
 
+// ── DEMO SIMULATION (only runs if no real events after 10s) ──
+let demoTimer = null;
+let realEventsReceived = false;
+
+const DEMO_EVENTS = [
+  {
+    alert_id: 'CG-DEMO-001',
+    timestamp: new Date().toISOString(),
+    threat_level: 'CRITICAL',
+    composite_risk_score: 97,
+    source_ip: '185.220.101.45',
+    geo_country: 'KP',
+    username: 'admin',
+    hostname: 'WORKSTATION-NYC-047',
+    threat_categories: ['Ransomware', 'Lateral Movement'],
+    attack_stage: 'Impact',
+    mitre_techniques: ['T1486 - Data Encrypted for Impact', 'T1021 - Remote Services'],
+    threat_summary: 'Ransomware execution detected from North Korean IP. Shadow copies being deleted. Immediate isolation recommended.',
+    containment_actions: [
+      { action_type: 'FIREWALL_BLOCK_IP', target: '185.220.101.45' },
+      { action_type: 'IDP_SUSPEND_ACCOUNT', target: 'admin' },
+      { action_type: 'EDR_ISOLATE_HOST', target: 'WORKSTATION-NYC-047' }
+    ],
+    confidence_score: 98,
+    ti_score: 82
+  },
+  {
+    alert_id: 'CG-DEMO-002',
+    timestamp: new Date(Date.now() + 5000).toISOString(),
+    threat_level: 'HIGH',
+    composite_risk_score: 74,
+    source_ip: '91.108.4.0',
+    geo_country: 'RU',
+    username: 'root',
+    hostname: 'DB-SERVER-01',
+    threat_categories: ['Brute Force', 'Credential Access'],
+    attack_stage: 'Credential Access',
+    mitre_techniques: ['T1110 - Brute Force', 'T1078 - Valid Accounts'],
+    threat_summary: 'SSH brute force attack from Russian IP against database server. 847 failed login attempts in 2 minutes.',
+    containment_actions: [],
+    confidence_score: 82,
+    ti_score: 42
+  },
+  {
+    alert_id: 'CG-DEMO-003',
+    timestamp: new Date(Date.now() + 10000).toISOString(),
+    threat_level: 'HIGH',
+    composite_risk_score: 68,
+    source_ip: '193.32.162.0',
+    geo_country: 'CN',
+    username: 'administrator',
+    hostname: 'WEB-PROXY-02',
+    threat_categories: ['SQL Injection', 'Data Exfiltration'],
+    attack_stage: 'Collection',
+    mitre_techniques: ['T1190 - Exploit Public-Facing Application', 'T1048 - Exfiltration Over Alt Protocol'],
+    threat_summary: 'SQL injection attempt against web application followed by bulk data query. Potential customer data exposure.',
+    containment_actions: [],
+    confidence_score: 76,
+    ti_score: 38
+  }
+];
+
+function runDemoMode() {
+  if (realEventsReceived) return;
+  addLog('No n8n events detected — showing demo data', 'normal');
+  addLog('Connect n8n workflow to see real attacks here', 'normal');
+
+  DEMO_EVENTS.forEach((ev, i) => {
+    setTimeout(() => {
+      if (!realEventsReceived) processEvent(ev);
+    }, i * 4000 + 500);
+  });
+}
+
+// Start demo after 8 seconds if no real events
+demoTimer = setTimeout(runDemoMode, 8000);
+
 // ── EXPOSE GLOBAL FUNCTION for manual testing ──
 window.injectEvent = function(eventData) {
+  realEventsReceived = true;
+  clearTimeout(demoTimer);
   processEvent(eventData);
 };
 
@@ -1303,8 +1381,8 @@ initMap();
 // ── SERVICE WORKER REGISTRATION for receiving POSTs ──
 // Netlify/Vercel function handles this — see deployment guide below
 
-addLog('CyberGuard AI dashboard initialized — waiting for n8n events', 'success');
-addLog('Polling every 2s — fire an attack through n8n to see it here', 'normal');
+addLog('Dashboard initialized — polling for n8n events every 2s', 'success');
+addLog('Map ready — attack locations will appear on first event', 'normal');
 </script>
 
 <!--
